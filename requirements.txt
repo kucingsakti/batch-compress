@@ -1,0 +1,10 @@
+# Core dependencies (stdlib only - no install needed)
+# Python 3.9+ required
+
+# Optional dependencies for enhanced features
+tqdm>=4.65.0        # Progress bar
+pyyaml>=6.0         # Config file support
+
+# Development dependencies
+pytest>=7.0.0       # Testing
+pytest-cov>=4.0.0   # Coverage reporting

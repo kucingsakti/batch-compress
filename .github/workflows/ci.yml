@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ['3.9', '3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install 7-Zip (Ubuntu)
+      if: runner.os == 'Linux'
+      run: sudo apt-get update && sudo apt-get install -y p7zip-full
+
+    - name: Install 7-Zip (macOS)
+      if: runner.os == 'macOS'
+      run: brew install p7zip
+
+    - name: Install 7-Zip (Windows)
+      if: runner.os == 'Windows'
+      run: choco install 7zip -y
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Run tests
+      run: |
+        pytest tests/ -v --cov=main --cov-report=xml --cov-report=term
+
+    - name: Upload coverage to Codecov
+      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
+      uses: codecov/codecov-action@v4
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install linting tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install ruff mypy
+
+    - name: Run ruff
+      run: ruff check main.py
+
+    - name: Run mypy
+      run: mypy main.py --ignore-missing-imports
+
+  integration:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Install 7-Zip
+      run: sudo apt-get update && sudo apt-get install -y p7zip-full
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Create test files
+      run: |
+        mkdir -p test_input
+        for i in {1..20}; do
+          echo "Test content $i" > "test_input/file_$i.txt"
+        done
+
+    - name: Run --check
+      run: python main.py --check
+
+    - name: Run --version
+      run: python main.py --version
+
+    - name: Run dry-run
+      run: python main.py --input test_input --output test_output --dry-run
+
+    - name: Run compression
+      run: python main.py --input test_input --output test_output --batch 5 --auto --verify --metadata output.json
+
+    - name: Verify archives created
+      run: |
+        ls -la test_output/
+        test -f test_output/archive_1.7z
+        test -f test_output/archive_2.7z
+        test -f test_output/archive_3.7z
+        test -f test_output/archive_4.7z
+
+    - name: Verify metadata
+      run: |
+        cat output.json
+        python -c "import json; data = json.load(open('output.json')); assert data['total_files'] == 20"

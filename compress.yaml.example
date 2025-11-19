@@ -1,0 +1,37 @@
+# Batch Compress Configuration File
+# Copy this file to compress.yaml and customize as needed
+# Usage: python main.py --config compress.yaml
+
+# Basic settings
+input: ./files
+output: ./archives
+batch: 100
+prefix: backup
+ext: 7z
+
+# Compression settings
+compression_level: 5  # 0 (store) to 9 (ultra)
+# password: your_secret_password  # Uncomment to enable encryption
+# split_size: 100M  # Uncomment to split into volumes
+
+# Execution control
+auto: true
+threads: 4
+
+# File filtering
+exclude:
+  - "*.tmp"
+  - "*.log"
+  - "*.bak"
+  - "Thumbs.db"
+  - ".DS_Store"
+
+# Advanced options
+recursive: false
+overwrite: false
+verify: false
+
+# Output
+# metadata: output.json  # Uncomment to export metadata
+logfile: compress_batches.log
+verbose: false
