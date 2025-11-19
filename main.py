@@ -8,18 +8,18 @@ Usage:
     python main.py --version
 """
 
-import sys
-import subprocess
-import shutil
-import logging
 import argparse
-import json
 import fnmatch
+import json
+import logging
 import re
-from pathlib import Path
-from datetime import datetime
+import shutil
+import subprocess
+import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Optional, Union
 
 __version__ = "2.0.0"
 
@@ -77,7 +77,7 @@ def check_tools() -> dict[str, Optional[str]]:
     return results
 
 
-def format_size(size_bytes: int) -> str:
+def format_size(size_bytes: Union[int, float]) -> str:
     """
     Format byte size to human-readable string.
 
@@ -87,11 +87,12 @@ def format_size(size_bytes: int) -> str:
     Returns:
         Formatted string (e.g., "1.5 MB")
     """
+    size = float(size_bytes)
     for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.2f} {unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.2f} PB"
+        if size < 1024.0:
+            return f"{size:.2f} {unit}"
+        size /= 1024.0
+    return f"{size:.2f} PB"
 
 
 def parse_size(size_str: str) -> int:
@@ -132,7 +133,7 @@ def load_config(config_path: str) -> dict:
         logging.error("PyYAML not installed. Run: pip install pyyaml")
         sys.exit(1)
 
-    with open(config_path, 'r', encoding='utf-8') as f:
+    with open(config_path, encoding='utf-8') as f:
         return yaml.safe_load(f) or {}
 
 
@@ -395,8 +396,8 @@ def compress_in_batches(
     Path(output_folder).mkdir(parents=True, exist_ok=True)
 
     # Prepare all batches first
-    batches = []
-    metadata = {
+    batches: list[tuple[int, list[Path], Path, int]] = []
+    metadata: dict[str, Any] = {
         "created_at": datetime.now().isoformat(),
         "input_folder": str(input_folder),
         "output_folder": str(output_folder),
@@ -445,7 +446,6 @@ def compress_in_batches(
     success_count = 0
     fail_count = 0
     total_output_size = 0
-    results = {}
 
     # Use tqdm if available
     if TQDM_AVAILABLE and not dry_run:
@@ -507,8 +507,8 @@ def compress_in_batches(
         metadata["total_output_size"] = total_output_size
         metadata["compression_ratio"] = (1 - total_output_size / total_input_size) * 100 if total_input_size > 0 else 0
 
-        with open(metadata_file, 'w', encoding='utf-8') as f:
-            json.dump(metadata, f, indent=2, ensure_ascii=False)
+        with open(metadata_file, 'w', encoding='utf-8') as mf:
+            json.dump(metadata, mf, indent=2, ensure_ascii=False)
         logging.info(f"Metadata exported to {metadata_file}")
 
     return (success_count, fail_count, total_input_size, total_output_size)

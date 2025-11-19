@@ -1,0 +1,27 @@
+[project]
+name = "batch-compress"
+version = "2.0.0"
+description = "CLI utility for batch compressing files using 7z"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}
+
+[tool.mypy]
+python_version = "3.9"
+ignore_missing_imports = true
+disable_error_code = ["import-untyped"]
+warn_return_any = true
+warn_unused_configs = true
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "C4"]
+ignore = ["E501"]  # line too long handled by line-length
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+addopts = "-v --tb=short"
